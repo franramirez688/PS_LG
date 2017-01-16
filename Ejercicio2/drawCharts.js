@@ -1,131 +1,160 @@
 
-var test_data1 = "http://s3.amazonaws.com/logtrust-static/test/test/data1.json";
-var test_data2 = "http://s3.amazonaws.com/logtrust-static/test/test/data2.json";
-var test_data3 = "http://s3.amazonaws.com/logtrust-static/test/test/data3.json";
-var global_data = [];
+var testData1 = "http://s3.amazonaws.com/logtrust-static/test/test/data1.json";
+var testData2 = "http://s3.amazonaws.com/logtrust-static/test/test/data2.json";
+var testData3 = "http://s3.amazonaws.com/logtrust-static/test/test/data3.json";
+var globalData = [];
 var dates = new Set();
 
+/**
+ * Draw a Line chart.
+ * @param {Array} datesAxis - List of dates values.
+ * @param {Array} series - List of objects {name: "CAT 1", data: [4 5 7]}.
+ */
+function drawLineChart(datesAxis, series){
+  Highcharts.chart('line_chart', {
+      title: {
+          text: 'Daily Category Value',
+          x: -20 //center
+      },
+      xAxis: {
+          categories: datesAxis
+      },
+      yAxis: {
+          title: {
+              text: 'Value'
+          },
+          plotLines: [{
+              value: 0,
+              width: 1,
+              color: '#808080'
+          }]
+      },
+      legend: {
+          layout: 'vertical',
+          align: 'right',
+          verticalAlign: 'middle',
+          borderWidth: 0
+      },
+      series: series
+  });
+}
 
-$.when(
-    $.getJSON( test_data1, function( data ) {
-      var _date = undefined;
-      _.each(data, function (item) {
-        _date = moment(item.d).format("YYYY-MM-DD");
-        global_data.push({
-            category: item.cat.toUpperCase(),
-            date: _date,
-            value: item.value
-        });
-        dates.add(_date);
-      });
-    }),
-    $.getJSON( test_data2, function( data ) {
-      _.each(data, function (item) {
-        global_data.push({
-            category: item.categ,
-            date: item.myDate,
-            value: item.val
-        });
-        dates.add(item.myDate);
-      });
-    }),
-    $.getJSON( test_data3, function( data ) {
-      var date_regex = /\d{4}-\d{2}-\d{2}/g;
-      var _date = undefined;
-      _.each(data, function (item) {
-        _date = item.raw.match(date_regex)[0];
-        global_data.push({
-            category: item.raw.split(/#/g)[1],
-            date: _date,
-            value: item.val
-        });
-        dates.add(_date)
-      });
-    })
-).then(function() {
-    var data_by_category = _.groupBy(_.sortBy(global_data, 'date'), 'category');
-    var xAxis = Array.from(dates).sort();
-    var categories = _.keys(data_by_category).sort();
-    var series_line_chart = [];
-    var series_pie_chart = [];
+/**
+ * Draw a Pie chart.
+ * @param {Array} seriesData - List of objects {name: "CAT 1", y: 1244.254}.
+ */
+function drawPieChart(seriesData) {
+  Highcharts.chart('pie_chart', {
+      chart: {
+          plotBackgroundColor: null,
+          plotBorderWidth: null,
+          plotShadow: false,
+          type: 'pie'
+      },
+      title: {
+          text: 'Categories Total Values'
+      },
+      tooltip: {
+          pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+      },
+      plotOptions: {
+          pie: {
+              allowPointSelect: true,
+              cursor: 'pointer',
+              dataLabels: {
+                  enabled: true,
+                  format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+                  style: {
+                      color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                  }
+              }
+          }
+      },
+      series: [{
+          name: 'Categories',
+          colorByPoint: true,
+          data: seriesData
+      }]
+  });
+}
 
+/**
+  Retrieve data from AWS thanks to Ajax jQuery function getJSON .
+*/
+function requestData() {
+  $.getJSON( testData1, function( data ) {
+    var _date = undefined;
+    _.each(data, function (item) {
+      _date = moment(item.d).format("YYYY-MM-DD");
+      globalData.push({
+          category: item.cat.toUpperCase(),
+          date: _date,
+          value: item.value
+      });
+      dates.add(_date);
+    });
+  });
+
+  $.getJSON( testData2, function( data ) {
+    _.each(data, function (item) {
+      globalData.push({
+          category: item.categ,
+          date: item.myDate,
+          value: item.val
+      });
+      dates.add(item.myDate);
+    });
+  });
+
+  $.getJSON( testData3, function( data ) {
+    var date_regex = /\d{4}-\d{2}-\d{2}/g;  // regex to catch YYYY-MM-DD
+    var _date = undefined;
+    _.each(data, function (item) {
+      _date = item.raw.match(date_regex)[0];
+      globalData.push({
+          category: item.raw.split(/#/g)[1],  // ["kjyj uyg ", "CAT 2", " kj bhhgh"]
+          date: _date,
+          value: item.val
+      });
+      dates.add(_date)
+    });
+  });
+}
+
+/**
+  Retrieve data and draw charts
+*/
+$(document).ready(function() {
+  $.when( requestData()  // Update all the data
+).then(function() {  // Draw the charts
+    var dataByCategory = _.groupBy(_.sortBy(globalData, 'date'), 'category');
+    var datesAxis = Array.from(dates).sort();
+    var categories = _.keys(dataByCategory).sort();
+    var seriesLineChart = [];
+    var seriesPieChart = [];
+
+    // Iterate through each of available category
     _.each(categories, function(category) {
-        var allDates = xAxis.slice()
-        var allValues = _.map(_.range(xAxis.length), function () { return 0.00000000000000; });
-
-        _.each(data_by_category[category], function(item) {
-          var indexValue = allDates.indexOf(item.date);
-          allValues[indexValue] += item.value;
+        var catValues = _.map(_.range(datesAxis.length), function () { return 0.00000000000000; });
+        var indexValue = undefined;
+        // Iterate through each of available data (objects) category
+        _.each(dataByCategory[category], function(item) {
+          // Accumulate values in the same date
+          indexValue = datesAxis.indexOf(item.date);
+          catValues[indexValue] += item.value;
         });
 
-        series_line_chart.push({
+        seriesLineChart.push({
             name: category,
-            data: allValues
+            data: catValues
         });
-        series_pie_chart.push({
+        seriesPieChart.push({
           name: category,
-          y: _.reduce(allValues, function(memo, num){ return memo + num; }, 0)
+          y: _.reduce(catValues, function(memo, num){ return memo + num; }, 0)  // values sum
         });
     });
 
-    Highcharts.chart('line_chart', {
-        title: {
-            text: 'Daily Category Value',
-            x: -20 //center
-        },
-        xAxis: {
-            categories: xAxis
-        },
-        yAxis: {
-            title: {
-                text: 'Value'
-            },
-            plotLines: [{
-                value: 0,
-                width: 1,
-                color: '#808080'
-            }]
-        },
-        legend: {
-            layout: 'vertical',
-            align: 'right',
-            verticalAlign: 'middle',
-            borderWidth: 0
-        },
-        series: series_line_chart
-    });
-
-    Highcharts.chart('pie_chart', {
-        chart: {
-            plotBackgroundColor: null,
-            plotBorderWidth: null,
-            plotShadow: false,
-            type: 'pie'
-        },
-        title: {
-            text: 'Categories Total Values'
-        },
-        tooltip: {
-            pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
-        },
-        plotOptions: {
-            pie: {
-                allowPointSelect: true,
-                cursor: 'pointer',
-                dataLabels: {
-                    enabled: true,
-                    format: '<b>{point.name}</b>: {point.percentage:.1f} %',
-                    style: {
-                        color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
-                    }
-                }
-            }
-        },
-        series: [{
-            name: 'Categories',
-            colorByPoint: true,
-            data: series_pie_chart
-        }]
-    });
-
+    drawLineChart(datesAxis, seriesLineChart);
+    drawPieChart(seriesPieChart);
+  });
 });
