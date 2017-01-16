@@ -5,6 +5,7 @@ var test_data3 = "http://s3.amazonaws.com/logtrust-static/test/test/data3.json";
 var global_data = [];
 var dates = new Set();
 
+
 $.when(
     $.getJSON( test_data1, function( data ) {
       var _date = undefined;
@@ -43,7 +44,6 @@ $.when(
     })
 ).then(function() {
     var data_by_category = _.groupBy(_.sortBy(global_data, 'date'), 'category');
-    // console.log(_.groupBy(global_data, 'date'));
     var xAxis = Array.from(dates).sort();
     var categories = _.keys(data_by_category).sort();
     var series_line_chart = [];
