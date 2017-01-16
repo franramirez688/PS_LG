@@ -35,9 +35,10 @@ $.when(
       });
     })
 ).then(function() {
-    var data_by_category = _.groupBy(global_data, 'category');
-    var categories = Object.keys(data_by_category);
-    var series = [];
+    var data_by_category = _.groupBy(_.sortBy(global_data, 'date'), 'category');
+    var categories = _.keys(data_by_category).sort();
+    var series_line_chart = [];
+    var series_pie_chart = [];
     var xAxis = [];
 
     _.each(categories, function(category) {
@@ -54,10 +55,15 @@ $.when(
                 allValues.push(item.value);
             }
         });
+
         xAxis = _.union(xAxis, allDates);
-        series.push({
+        series_line_chart.push({
             name: category,
             data: allValues
+        });
+        series_pie_chart.push({
+          name: category,
+          y: _.reduce(allValues, function(memo, num){ return memo + num; }, 0)
         });
     });
 
@@ -79,16 +85,13 @@ $.when(
                 color: '#808080'
             }]
         },
-        tooltip: {
-            valueSuffix: '°C'
-        },
         legend: {
             layout: 'vertical',
             align: 'right',
             verticalAlign: 'middle',
             borderWidth: 0
         },
-        series: series
+        series: series_line_chart
     });
 
     Highcharts.chart('pie_chart', {
@@ -99,7 +102,7 @@ $.when(
             type: 'pie'
         },
         title: {
-            text: 'Browser market shares January, 2015 to May, 2015'
+            text: 'Categories Total Values'
         },
         tooltip: {
             pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
@@ -118,29 +121,9 @@ $.when(
             }
         },
         series: [{
-            name: 'Brands',
+            name: 'Categories',
             colorByPoint: true,
-            data: [{
-                name: 'Microsoft Internet Explorer',
-                y: 56.33
-            }, {
-                name: 'Chrome',
-                y: 24.03,
-                sliced: true,
-                selected: true
-            }, {
-                name: 'Firefox',
-                y: 10.38
-            }, {
-                name: 'Safari',
-                y: 4.77
-            }, {
-                name: 'Opera',
-                y: 0.91
-            }, {
-                name: 'Proprietary or Undetectable',
-                y: 0.2
-            }]
+            data: series_pie_chart
         }]
     });
 
