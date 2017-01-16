@@ -3,16 +3,19 @@ var test_data1 = "http://s3.amazonaws.com/logtrust-static/test/test/data1.json";
 var test_data2 = "http://s3.amazonaws.com/logtrust-static/test/test/data2.json";
 var test_data3 = "http://s3.amazonaws.com/logtrust-static/test/test/data3.json";
 var global_data = [];
-
+var dates = new Set();
 
 $.when(
     $.getJSON( test_data1, function( data ) {
+      var _date = undefined;
       _.each(data, function (item) {
+        _date = moment(item.d).format("YYYY-MM-DD");
         global_data.push({
             category: item.cat.toUpperCase(),
-            date: moment(item.d).format("YYYY-MM-DD"),
+            date: _date,
             value: item.value
         });
+        dates.add(_date);
       });
     }),
     $.getJSON( test_data2, function( data ) {
@@ -22,41 +25,39 @@ $.when(
             date: item.myDate,
             value: item.val
         });
+        dates.add(item.myDate);
       });
     }),
     $.getJSON( test_data3, function( data ) {
       var date_regex = /\d{4}-\d{2}-\d{2}/g;
+      var _date = undefined;
       _.each(data, function (item) {
+        _date = item.raw.match(date_regex)[0];
         global_data.push({
             category: item.raw.split(/#/g)[1],
-            date: item.raw.match(date_regex)[0],
+            date: _date,
             value: item.val
         });
+        dates.add(_date)
       });
     })
 ).then(function() {
     var data_by_category = _.groupBy(_.sortBy(global_data, 'date'), 'category');
+    // console.log(_.groupBy(global_data, 'date'));
+    var xAxis = Array.from(dates).sort();
     var categories = _.keys(data_by_category).sort();
     var series_line_chart = [];
     var series_pie_chart = [];
-    var xAxis = [];
 
     _.each(categories, function(category) {
-        var allDates = [];
-        var allValues = [];
+        var allDates = xAxis.slice()
+        var allValues = _.map(_.range(xAxis.length), function () { return 0.00000000000000; });
 
         _.each(data_by_category[category], function(item) {
-            var index = allDates.indexOf(item.date);
-            if (index > -1){
-                allValues[index] += item.value;
-            }
-            else {
-                allDates.push(item.date);
-                allValues.push(item.value);
-            }
+          var indexValue = allDates.indexOf(item.date);
+          allValues[indexValue] += item.value;
         });
 
-        xAxis = _.union(xAxis, allDates);
         series_line_chart.push({
             name: category,
             data: allValues
