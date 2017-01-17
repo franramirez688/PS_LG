@@ -79,53 +79,45 @@ function drawPieChart(seriesData) {
 }
 
 /**
-  Retrieve data from AWS thanks to Ajax jQuery function getJSON .
-*/
-function requestData() {
-  $.getJSON( testData1, function( data ) {
-    var _date = undefined;
-    _.each(data, function (item) {
-      _date = moment(item.d).format("YYYY-MM-DD");
-      globalData.push({
-          category: item.cat.toUpperCase(),
-          date: _date,
-          value: item.value
-      });
-      dates.add(_date);
-    });
-  });
-
-  $.getJSON( testData2, function( data ) {
-    _.each(data, function (item) {
-      globalData.push({
-          category: item.categ,
-          date: item.myDate,
-          value: item.val
-      });
-      dates.add(item.myDate);
-    });
-  });
-
-  $.getJSON( testData3, function( data ) {
-    var date_regex = /\d{4}-\d{2}-\d{2}/g;  // regex to catch YYYY-MM-DD
-    var _date = undefined;
-    _.each(data, function (item) {
-      _date = item.raw.match(date_regex)[0];
-      globalData.push({
-          category: item.raw.split(/#/g)[1],  // ["kjyj uyg ", "CAT 2", " kj bhhgh"]
-          date: _date,
-          value: item.val
-      });
-      dates.add(_date)
-    });
-  });
-}
-
-/**
   Retrieve data and draw charts
 */
 $(document).ready(function() {
-  $.when( requestData()  // Update all the data
+  $.when(  // Update all the data
+    $.getJSON( testData1, function( data ) {
+      var _date = undefined;
+      _.each(data, function (item) {
+        _date = moment(item.d).format("YYYY-MM-DD");
+        globalData.push({
+            category: item.cat.toUpperCase(),
+            date: _date,
+            value: item.value
+        });
+        dates.add(_date);
+      });
+    }),
+    $.getJSON( testData2, function( data ) {
+      _.each(data, function (item) {
+        globalData.push({
+            category: item.categ,
+            date: item.myDate,
+            value: item.val
+        });
+        dates.add(item.myDate);
+      });
+    }),
+    $.getJSON( testData3, function( data ) {
+      var date_regex = /\d{4}-\d{2}-\d{2}/g;  // regex to catch YYYY-MM-DD
+      var _date = undefined;
+      _.each(data, function (item) {
+        _date = item.raw.match(date_regex)[0];
+        globalData.push({
+            category: item.raw.split(/#/g)[1],  // ["kjyj uyg ", "CAT 2", " kj bhhgh"]
+            date: _date,
+            value: item.val
+        });
+        dates.add(_date)
+      });
+    })
 ).then(function() {  // Draw the charts
     var dataByCategory = _.groupBy(_.sortBy(globalData, 'date'), 'category');
     var datesAxis = Array.from(dates).sort();
